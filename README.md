@@ -1,12 +1,20 @@
 # 🤖 Claude Cloud Telegram Bot
 
-Trigger [Claude Cloud](https://github.com/shubham21155102/claude-cloud) GitHub Actions workflows directly from Telegram.
+Trigger [Claude Cloud](https://github.com/shubham21155102/claude-cloud) GitHub Actions workflows and interact with AI — all from Telegram.
 
 ## Architecture
 
 ```
 Telegram → Bot (polling) → GitHub API (repository_dispatch) → GitHub Actions Workflow
+                         → Z.AI API (Claude) → AI responses
 ```
+
+## Features
+
+- **Trigger GitHub Actions** — Run Claude Cloud contribution workflows from Telegram
+- **Prompt Enhancement** — Turn short, vague prompts into detailed, well-structured ones using AI
+- **AI Q&A** — Ask any question, powered by Claude via Z.AI
+- **Workflow Monitoring** — Check run status and download logs
 
 ## Setup
 
@@ -40,39 +48,89 @@ npm start
 
 # Docker
 docker compose up -d
-
-# Docker (manual)
-docker build -t claude-cloud-bot .
-docker run -d --env-file .env --name claude-bot claude-cloud-bot
 ```
 
 ## Commands
+
+### Workflow Commands
 
 | Command | Description |
 |---------|-------------|
 | `/contribute <org> <repo> <issue>` | Trigger a contribution workflow |
 | `/contribute_logs <org> <repo> <issue>` | Same with Claude Code logs enabled |
 | `/status` | Show last 5 workflow runs with links |
-| `/logs [run_id]` | Get logs download link |
-| `/help` | Show help message |
+| `/logs [run_id]` | Get logs download link (latest if no ID) |
 
-### Examples
+### AI Commands
+
+| Command | Description |
+|---------|-------------|
+| `/enhance <short prompt>` | Turn a short prompt into a detailed, descriptive one |
+| `/ask <question>` | Ask any question, powered by Claude |
+
+## Examples
 
 ```
+# Trigger a contribution
 /contribute facebook react Fix the useEffect cleanup bug in concurrent mode
-/contribute_logs myorg myrepo Add dark mode support to the dashboard
+
+# Enhance a vague prompt before contributing
+/enhance add dark mode
+# Bot returns a detailed prompt → use it with /contribute
+
+# Ask a question
+/ask How do I set up a Kubernetes ingress controller with TLS?
+
+# Check workflow status
 /status
+
+# Get logs for a specific run
 /logs 12345678
 ```
 
-## Deployment Options
+## Deployment
 
-- **EC2**: Run on a `t3.nano` — cheapest, uses long-polling (no inbound ports needed)
-- **ECS Fargate**: Small task definition, auto-restart
-- **Docker on any VPS**: `docker compose up -d`
+### Docker (EC2 / any VPS)
+
+```bash
+# Login to GitHub Container Registry
+echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u shubham21155102 --password-stdin
+
+# Create .env with your secrets
+nano .env
+
+# Pull and run
+docker compose -f docker-compose.prod.yml up -d
+
+# Update to latest
+docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+```
+
+### Local Development
+
+```bash
+npm install
+npm run dev  # auto-restart on file changes
+```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `TELEGRAM_BOT_TOKEN` | ✅ | Bot token from @BotFather |
+| `GH_TOKEN` | ✅ | GitHub PAT with `repo` scope |
+| `GITHUB_REPO` | ✅ | Repo with the workflow (e.g. `shubham21155102/claude-cloud`) |
+| `ZAI_API_KEY` | ✅ | Z.AI API key for `/enhance` and `/ask` |
+| `ALLOWED_CHAT_IDS` | ❌ | Comma-separated chat IDs (empty = allow all) |
+| `EVENT_TYPE` | ❌ | Dispatch event type (default: `slack-trigger`) |
+| `ZAI_MODEL` | ❌ | Model to use (default: `claude-opus-4-5-20251101`) |
 
 ## Security
 
 - Set `ALLOWED_CHAT_IDS` to restrict who can trigger workflows
-- The bot uses long-polling (outbound only) — no webhook/ports to expose
+- Bot uses long-polling (outbound only) — no ports to expose
 - Never commit `.env` — it's in `.gitignore`
+
+## License
+
+MIT

@@ -1,5 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { triggerWorkflow, getWorkflowRuns, getRunLogs } = require('./github');
+const { enhancePrompt, askQuestion } = require('./zai');
 const { isAuthorized } = require('./auth');
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -10,6 +11,27 @@ if (!TELEGRAM_TOKEN) {
 }
 
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
+
+// Telegram has a 4096 char limit per message
+const MAX_MSG_LEN = 4000;
+
+/**
+ * Send a long message, splitting into chunks if needed
+ */
+async function sendLong(chatId, text, opts = {}) {
+  if (text.length <= MAX_MSG_LEN) {
+    return bot.sendMessage(chatId, text, opts);
+  }
+  const chunks = [];
+  let remaining = text;
+  while (remaining.length > 0) {
+    chunks.push(remaining.slice(0, MAX_MSG_LEN));
+    remaining = remaining.slice(MAX_MSG_LEN);
+  }
+  for (const chunk of chunks) {
+    await bot.sendMessage(chatId, chunk, opts);
+  }
+}
 
 // ─── /contribute <org> <repo> <issue> ─────────────────────────────────
 bot.onText(/\/contribute\s+(\S+)\s+(\S+)\s+(.+)/s, async (msg, match) => {
@@ -56,6 +78,40 @@ bot.onText(/\/contribute_logs\s+(\S+)\s+(\S+)\s+(.+)/s, async (msg, match) => {
     } else {
       await bot.sendMessage(chatId, `❌ GitHub API error (${result.status}): ${result.message}`);
     }
+  } catch (err) {
+    await bot.sendMessage(chatId, `❌ Error: ${err.message}`);
+  }
+});
+
+// ─── /enhance <short prompt> ──────────────────────────────────────────
+bot.onText(/\/enhance\s+(.+)/s, async (msg, match) => {
+  const chatId = msg.chat.id;
+  if (!isAuthorized(chatId)) return bot.sendMessage(chatId, '⛔ Unauthorized.');
+
+  const shortPrompt = match[1].trim();
+
+  await bot.sendMessage(chatId, '🔄 Enhancing your prompt...');
+
+  try {
+    const enhanced = await enhancePrompt(shortPrompt);
+    await sendLong(chatId, `✨ *Enhanced Prompt:*\n\n${enhanced}`, { parse_mode: 'Markdown' });
+  } catch (err) {
+    await bot.sendMessage(chatId, `❌ Error: ${err.message}`);
+  }
+});
+
+// ─── /ask <question> ──────────────────────────────────────────────────
+bot.onText(/\/ask\s+(.+)/s, async (msg, match) => {
+  const chatId = msg.chat.id;
+  if (!isAuthorized(chatId)) return bot.sendMessage(chatId, '⛔ Unauthorized.');
+
+  const question = match[1].trim();
+
+  await bot.sendMessage(chatId, '🤔 Thinking...');
+
+  try {
+    const answer = await askQuestion(question);
+    await sendLong(chatId, answer);
   } catch (err) {
     await bot.sendMessage(chatId, `❌ Error: ${err.message}`);
   }
@@ -128,7 +184,7 @@ bot.onText(/\/help|\/start/, (msg) => {
     msg.chat.id,
     `🤖 *Claude Cloud Trigger Bot*
 
-*Commands:*
+*Workflow Commands:*
 \`/contribute <org> <repo> <issue>\`
 Trigger a contribution workflow
 
@@ -136,13 +192,22 @@ Trigger a contribution workflow
 Same but with Claude Code logs enabled
 
 \`/status\`
-Show last 5 workflow runs with links
+Show last 5 workflow runs
 
 \`/logs [run_id]\`
-Get logs download link (latest run if no ID)
+Get logs download link
 
-*Example:*
-\`/contribute facebook react Fix the useEffect cleanup bug in concurrent mode\``,
+*AI Commands:*
+\`/enhance <short prompt>\`
+Turn a short prompt into a detailed, descriptive one
+
+\`/ask <question>\`
+Ask any question, powered by Claude
+
+*Examples:*
+\`/contribute facebook react Fix useEffect cleanup bug\`
+\`/enhance add dark mode\`
+\`/ask How do I set up a Kubernetes ingress controller?\``,
     { parse_mode: 'Markdown' }
   );
 });
