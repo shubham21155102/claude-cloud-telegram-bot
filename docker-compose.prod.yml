@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  bot:
+    image: ghcr.io/shubham21155102/claude-cloud-telegram-bot:latest
+    container_name: claude-telegram-bot
+    restart: always
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - GH_TOKEN=${GH_TOKEN}
+      - GITHUB_REPO=${GITHUB_REPO:-shubham21155102/claude-cloud}
+      - ALLOWED_CHAT_IDS=${ALLOWED_CHAT_IDS:-}
+      - EVENT_TYPE=${EVENT_TYPE:-slack-trigger}
+    env_file:
+      - .env
