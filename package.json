@@ -4,13 +4,19 @@
   "description": "Telegram bot to trigger Claude Cloud GitHub Actions workflows",
   "main": "src/bot.js",
   "scripts": {
-    "start": "node src/bot.js",
+    "start": "node -r dotenv/config src/bot.js",
     "dev": "node --watch src/bot.js"
   },
-  "keywords": ["telegram", "github-actions", "claude", "automation"],
+  "keywords": [
+    "telegram",
+    "github-actions",
+    "claude",
+    "automation"
+  ],
   "author": "shubham21155102",
   "license": "MIT",
   "dependencies": {
+    "dotenv": "^17.2.4",
     "node-telegram-bot-api": "^0.66.0"
   }
 }
