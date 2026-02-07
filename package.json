@@ -1,0 +1,16 @@
+{
+  "name": "claude-cloud-telegram-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot to trigger Claude Cloud GitHub Actions workflows",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js",
+    "dev": "node --watch src/bot.js"
+  },
+  "keywords": ["telegram", "github-actions", "claude", "automation"],
+  "author": "shubham21155102",
+  "license": "MIT",
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0"
+  }
+}
